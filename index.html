@@ -1,10 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+	<title>SNH Chipper Extended</title>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+</head>
 
+<body>
 <table width="100%" align="center">
 	<tr>
 		<td width="50%">
 			<fieldset style="height:120">
 				<legend><b> SNH Chiper | Encrypt </b></legend>
-				<textarea rows="4" name="pesan" class="pesan" id="pesan" cols="87" ></textarea>
+				<textarea rows="4" name="pesan" class="pesan" id="pesan" cols="87" >12345678</textarea>
 				<br/><br/>
 				<button type="submit" id="enkrip">Encryp</button>
 			</fieldset>
@@ -64,13 +73,17 @@ $("#enkrip").on("click",function(){
 	enkript[i]=split[i].length;
   }
   console.log(enkript);
-  
-  
-  $('#hasil').html(enkript); 
+  var compressed = bitCompress(enkript);
+  console.log(compressed);
+  // Convert to html char code ( biar karakter nggak kotak2 )
+  //compressed = compressed.map( c => '&#' + c + ';').join('');
+  $('#hasil').html(compressed); 
 });
 
 $("#dekript").on("click",function(){
   var pesan=$("#pesandek").val();
+  pesan = bitDecompress(pesan);
+  console.log(pesan);
   var dekript=[];
   for (i = 0; i < pesan.length; i++) {
     dekript[i] = ( i % 2).toString().repeat( pesan[i] )
@@ -87,5 +100,64 @@ $("#dekript").on("click",function(){
   $('#hasildek').html(a); 
 });
 
-</script>
+/** str = berisi array angka dari 1 - 7 */
+function bitCompress( str ){
+	return str
+	// Convert to number, then to string binnary (bit) = [101, 1, 10, 10]
+	.map( c => c.toString(2) )
+	// tambah 0 di depan agar panjangnya 3 bit = [101, 001, 010, 010]
+	.map( c => "0".repeat( 3 - c.length) + c )
+	// gabungkan semua bit = 101001010010
+	.join('')
+	// jadikan array dengan isi minimal 1 bit, max 8 bit. = [10101111, 0010 ]
+	.match(/.{1,8}/g)
+	// convert binnary to integer = [175, 2]
+	.map( c => parseInt(c, 2) )
+	// convert to chars
+	.map( c => String.fromCharCode(c) )
+}
 
+/** str = String or array of string */
+function bitDecompress( str ){
+	// convert to array of string / char
+	if(!Array.isArray( str )){
+		str = str.split('');
+	}
+	var binaries = str
+		// convert to decimal
+		.map( c => c.charCodeAt(0) )
+		// convert to binnary
+		.map( c => c.toString(2) )
+		// Pastikan panjangnya 8 bit, kecuali byte terakhir, biarkan apa adanya.
+		.map( (c, index, array) => {
+			if( index == array.length - 1){
+				return c; // byte terakhir, abaikan
+			}else{
+				return "0".repeat( 8 - c.length ) + c;
+			}
+		})
+	// ada kemungkinan bit 0 di bytes terakhir hilang
+	// 0010 --> 10 ( 0 di depan pasti hilang )
+
+	let totalBit = binaries.reduce( (total, c ) => total + c.length, 0);
+	// Cek bit yg kurang, dengan modulus 3
+	let kekuranganBit = totalBit % 3;
+
+	if( kekuranganBit > 0 ){
+		let lastByte = binaries[ binaries.length - 1 ];
+		// Tambahkan bit ke byte terakhir jika ada yang kurang
+		binaries[ binaries.length - 1 ] = "0".repeat(3 - kekuranganBit) + lastByte;
+	}
+	console.log('BIN', binaries);
+	return binaries
+	// Gabungkan deret binary
+	.join('')
+	// pisahkan per 3 bit
+	.match(/.{3}/g)
+	// convert binary ke decimal number
+	.map( c => parseInt(c, 2))
+}
+
+</script>
+</body>
+</html>
